@@ -4,25 +4,32 @@ import Control.Monad (mplus)
 import Data.List
 import Data.List.Split (splitOn)
 
--- isMirrored :: Eq a => [a] -> Int -> Bool
--- isMirrored as n = and $ zipWith (==) (reverse start) end
---   where (start, end) = splitAt n as
 
+-- Count the number of differences between an image and its
+-- reflection assuming the mirror is placed after row n.
 countDiffs :: Eq a => [[a]] -> Int -> Int
-countDiffs as n = sum $ (\(as, bs) -> length $ filter id $ zipWith (/=) as bs) <$> zip (reverse start) end
-  where (start, end) = splitAt n as
-
--- findMirror :: Eq a => [a] -> Maybe Int
--- findMirror as = find (isMirrored as)  [1..length as - 1]
-
-findWithSmudges :: Eq a => Int -> [[a]] -> Maybe Int
-findWithSmudges nSmudges as = find ((== nSmudges) . countDiffs as)  [1..length as - 1]
-
-scorePuzzle :: Eq a => ([[a]] -> Maybe Int) -> [[a]] -> Maybe Int
-scorePuzzle findMirror as = mplus horizontal vertical
+countDiffs puzzle n = sum $ countDiffsInRows <$> zip (reverse image) reflection
   where
-    horizontal = (100 *) <$> findMirror as
-    vertical = findMirror (transpose as)
+    (image, reflection) = splitAt n puzzle
+    countDiffsInRows :: Eq a => ([a], [a]) -> Int
+    countDiffsInRows = length . filter (uncurry (/=)) . uncurry zip
+
+-- Find a position for the mirror that is consistent with the given
+-- number of smudges.
+findWithSmudges :: Eq a => Int -> [[a]] -> Maybe Int
+findWithSmudges nSmudges puzzle = find ((== nSmudges) . countDiffs puzzle) [1 .. nRows - 1]
+  where
+    nRows = length puzzle
+
+-- Score a puzzle according to the rules using the given mirror
+-- finding function.
+scorePuzzle :: Eq a => ([[a]] -> Maybe Int) -> [[a]] -> Maybe Int
+scorePuzzle findMirror puzzle = mplus horizontalScore verticalScore
+  where
+    horizontalScore = (* 100) <$> findMirror puzzle
+    -- Finding a vertical mirror is the same as finding a horizontal
+    -- mirror in the transpose of the puzzle.
+    verticalScore = findMirror (transpose puzzle)
 
 main :: IO ()
 main = do
