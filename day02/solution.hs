@@ -41,6 +41,7 @@ game = do
   n <- number
   _ <- string ": "
   handfuls <- handful `sepBy` string "; "
+  _ <- char '\n'
   pure (n, handfuls)
 
 minColors :: Game -> (Int, Int, Int)
@@ -60,9 +61,12 @@ power (r, g, b) = r * g * b
 
 main :: IO ()
 main = do
-  input <- lines <$> readFile "input.txt"
+  let fname = "input.txt"
+  input <- readFile fname
+  let games = case parse (many game) fname input of
+        Left err -> error $ show err
+        Right games -> games
   putStrLn "Part 1:"
-  let Right games = mapM (parse game "") input
   print $ sum $ fst <$> filter possible games
   putStrLn "Part 2:"
   print $ sum $ power . minColors <$> games
