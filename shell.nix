@@ -7,7 +7,6 @@ let
     base
     split
     vector
-    hmatrix
     regex-pcre
     regex-posix
   ];

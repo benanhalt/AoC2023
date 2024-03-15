@@ -1,9 +1,11 @@
 import Data.List (tails)
 
+type Q = Rational
+
 pairs :: [a] -> [(a, a)]
 pairs l = [(x, y) | (x : ys) <- tails l, y <- ys]
 
-intersect :: (Fractional a, Ord a) => [a] -> [a] -> Maybe (a, a, a, a)
+intersect :: [Q] -> [Q] -> Maybe (Q, Q, Q, Q)
 intersect [x, y, z, vx, vy, vz] [x', y', z', vx', vy', vz'] =
   let d = vx * vy' - vy * vx'
       t = (vx' * (y - y') - vy' * (x - x')) / d
@@ -12,11 +14,11 @@ intersect [x, y, z, vx, vy, vz] [x', y', z', vx', vy', vz'] =
       y1 = y' + vy' * t'
    in if abs d > 0 then Just (t, t', x1, y1) else Nothing
 
-test :: (Ord a, Num a) => a -> a -> Maybe (a, a, a, a) -> Bool
+test :: Q -> Q -> Maybe (Q, Q, Q, Q) -> Bool
 test _ _ Nothing = False
 test a b (Just (t, t', x, y)) = t >= 0 && t' >= 0 && x >= a && x <= b && y >= a && y <= b
 
-partOne :: Real a => [[a]] -> Int
+partOne :: [[Integer]] -> Int
 partOne stones = length $ filter (test 200000000000000 400000000000000) $
   map (uncurry intersect) $ pairs $ map toRational <$> stones
 
@@ -38,7 +40,7 @@ joinHorz = zipWith (++)
 joinVert :: [a] -> [a] -> [a]
 joinVert = (++)
 
-solve :: [[Rational]] -> [Rational]
+solve :: [[Q]] -> [Q]
 solve [s1, s2, s3] =
   let (r1, v1) = splitAt 3 s1
       (r2, v2) = splitAt 3 s2
@@ -51,12 +53,12 @@ solve [s1, s2, s3] =
         (joinHorz (crossV $ v1 `vSub` v3) (crossV $ r1 `vSub` r3))
    in geSolve coeff rhs
 
-geSolve :: (Fractional a, Eq a) => [[a]] -> [a] -> [a]
+geSolve :: [[Q]] -> [Q] -> [Q]
 geSolve a b = resubstitute $ triangular a'
   where
     a' = zipWith (++) a $ map pure b
 
-triangular :: (Fractional a, Eq a) => [[a]] -> [[a]]
+triangular :: [[Q]] -> [[Q]]
 triangular [] = []
 triangular m = row : triangular rows'
   where
@@ -68,7 +70,7 @@ triangular m = row : triangular rows'
     rotatePivot m@(row : rows) | head row /= 0 = m
                                | otherwise     = rotatePivot (rows ++ [row])
 
-resubstitute :: (Fractional a) => [[a]] -> [a]
+resubstitute :: [[Q]] -> [Q]
 resubstitute = reverse . resubstitute' . reverse . map reverse
   where
     resubstitute' [] = []
@@ -78,7 +80,7 @@ resubstitute = reverse . resubstitute' . reverse . map reverse
         rows' = map substituteUnknown rows
         substituteUnknown (a1:a2:as) = a1-x*a2:as
 
-partTwo :: Real a => [[a]] -> Rational
+partTwo :: [[Integer]] -> Rational
 partTwo stones =
   let solution = solve $ map (map toRational) $ take 3 stones
   in sum $ take 3 solution
