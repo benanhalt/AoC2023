@@ -22,24 +22,31 @@ partOne :: [[Integer]] -> Int
 partOne stones = length $ filter (test 200000000000000 400000000000000) $
   map (uncurry intersect) $ pairs $ map toRational <$> stones
 
+-- crossV a returns the matrix m s.t. mMult m b = a X b.
 crossV :: Num a => [a] -> [[a]]
 crossV [x, y, z] =
     [[ 0, -z,  y],
      [ z,  0, -x],
      [-y,  x,  0]]
 
+-- mMult m v multiplies the column vector v by the matrix m.
 mMult :: Num a => [[a]] -> [a] -> [a]
 mMult m v = map (sum . zipWith (*) v) m
 
+-- vSub a b returns a - b where a and b are vectors.
 vSub :: Num a => [a] -> [a] -> [a]
 vSub = zipWith (-)
 
+-- horizontally join mXn and mXo matrices into a mX(n+o) block matrix.
 joinHorz :: [[a]] -> [[a]] -> [[a]]
 joinHorz = zipWith (++)
 
+-- vertically join mXn and oXn matrices into a (m+o)xn block matrix.
 joinVert :: [a] -> [a] -> [a]
 joinVert = (++)
 
+-- given three stones, solve for the position and velocity of the
+-- thrown stone.
 solve :: [[Q]] -> [Q]
 solve [s1, s2, s3] =
   let (r1, v1) = splitAt 3 s1
@@ -53,11 +60,18 @@ solve [s1, s2, s3] =
         (joinHorz (crossV $ v1 `vSub` v3) (crossV $ r1 `vSub` r3))
    in geSolve coeff rhs
 
+-- The following three functions are adapted from
+-- https://haskellicious.wordpress.com/2012/11/26/the-gauss-algorithm-in-haskell/
+
+-- solve a linear system of the form ax=b for x where
+-- a is a matrix and b is a column vector.
 geSolve :: [[Q]] -> [Q] -> [Q]
 geSolve a b = resubstitute $ triangular a'
   where
     a' = zipWith (++) a $ map pure b
 
+-- use guassian elimination to convert a matrix into
+-- upper triangular form.
 triangular :: [[Q]] -> [[Q]]
 triangular [] = []
 triangular m = row : triangular rows'
@@ -70,6 +84,8 @@ triangular m = row : triangular rows'
     rotatePivot m@(row : rows) | head row /= 0 = m
                                | otherwise     = rotatePivot (rows ++ [row])
 
+-- use back substitution to find the solution to a linear system given
+-- by an upper triangular matrix.
 resubstitute :: [[Q]] -> [Q]
 resubstitute = reverse . resubstitute' . reverse . map reverse
   where
