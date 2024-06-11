@@ -9,6 +9,7 @@ let
     vector
     regex-pcre
     regex-posix
+    psqueues
   ];
 
   ghc = haskellPackages.ghcWithPackages haskellDeps;
