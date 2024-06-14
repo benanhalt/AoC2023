@@ -1,6 +1,7 @@
 import Data.Functor
 import Text.Parsec
 import Text.Parsec.String (Parser)
+import Data.List (inits, foldl')
 import Data.List.Split (splitOn)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
@@ -66,24 +67,6 @@ parsePart s = case parse part "" s of
   Left err -> error $ show err ++ s
   Right p -> p
 
--- px{a<2006:qkq,m>2090:A,rfg}
--- pv{a>1716:R,A}
--- lnx{m>1548:A,A}
--- rfg{s<537:gd,x>2440:R,A}
--- qs{s>3448:A,lnx}
--- qkq{x<1416:A,crn}
--- crn{x>2662:A,R}
--- in{s<1351:px,qqz}
--- qqz{s>2770:qs,m<1801:hdj,R}
--- gd{a>3333:R,R}
--- hdj{m>838:A,pv}
-
--- {x=787,m=2655,a=1222,s=2876}
--- {x=1679,m=44,a=2067,s=496}
--- {x=2036,m=264,a=79,s=2244}
--- {x=2461,m=1339,a=466,s=291}
--- {x=2127,m=1623,a=2188,s=1013}
-
 applyWF :: WorkFlow -> Part -> String
 applyWF (WorkFlow _ rules def) part =
   let
@@ -111,6 +94,44 @@ runFull :: Map String WorkFlow -> Part -> String
 runFull wfs part = head $ dropWhile (not . (`elem` ["A", "R"])) $
   iterate (run wfs part) "in"
 
+inv :: Rule -> Rule
+inv (LTRule var val dest) = GTRule var (val - 1) dest
+inv (GTRule var val dest) = LTRule var (val + 1) dest
+
+dest :: Rule -> String
+dest (LTRule _ _ d) = d
+dest (GTRule _ _ d) = d
+
+acceptedRuleChains :: Map String WorkFlow -> String -> [Rule] -> [[Rule]]
+acceptedRuleChains _ "A" prevRules = [prevRules]
+acceptedRuleChains _ "R" _ = []
+acceptedRuleChains wfs startingWF prevRules =
+  let
+    Just (WorkFlow name rules def) = M.lookup startingWF wfs
+    invRules = map inv rules
+    conds = zipWith (:) rules (inits invRules) ++ [invRules]
+    dests = map dest rules ++ [def]
+    prefixedConds = (prevRules ++) <$> conds
+  in
+    concat $ zipWith (acceptedRuleChains wfs) dests prefixedConds
+
+andRules :: [Rule] -> Map Char (Int, Int)
+andRules = foldl' update (M.fromList [('x', (1, 4000)), ('m', (1, 4000)), ('a', (1, 4000)), ('s', (1, 4000))])
+  where
+    update vars (LTRule var val _) =
+      let
+        Just (minVal, maxVal) = M.lookup var vars
+      in
+        M.insert var (minVal, min (val - 1) maxVal) vars
+    update vars (GTRule var val _) =
+      let
+        Just (minVal, maxVal) = M.lookup var vars
+      in
+        M.insert var (max minVal (val + 1), maxVal) vars
+
+possibilities :: Map Char (Int, Int) -> Int
+possibilities vars = product [maxVal - minVal + 1 | (minVal, maxVal) <- M.elems vars]
+
 main :: IO ()
 main = do
   input <- lines <$> readFile "input.txt"
@@ -118,7 +139,12 @@ main = do
   let wfs = M.fromList $ do
         wf@(WorkFlow name _ _) <- parseWF <$> workflows
         pure (name, wf)
-
   let parts = parsePart <$> ratings
+
+  putStrLn "Part 1:"
   let accepted = filter ((== "A") . runFull wfs) parts
   print $ sum $ sum <$> accepted
+
+  putStrLn "Part 2:"
+  let result = andRules <$> acceptedRuleChains wfs "in" []
+  print $ sum $ possibilities <$> result
