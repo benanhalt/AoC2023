@@ -116,7 +116,7 @@ acceptedRuleChains wfs startingWF prevRules =
     concat $ zipWith (acceptedRuleChains wfs) dests prefixedConds
 
 andRules :: [Rule] -> Map Char (Int, Int)
-andRules = foldl' update (M.fromList [('x', (1, 4000)), ('m', (1, 4000)), ('a', (1, 4000)), ('s', (1, 4000))])
+andRules = foldl' update (M.fromList [(c, (1, 4000)) | c <- "xmas"])
   where
     update vars (LTRule var val _) =
       let
